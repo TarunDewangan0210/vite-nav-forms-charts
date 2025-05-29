@@ -157,11 +157,8 @@ npm run test:coverage
 5. Ensure all tests pass
 6. Submit a pull request
 
-## License
 
-This project is licensed under the MIT License.
-
-## Future Enhancements
+## Nice to have - Future Enhancements
 
 - [ ] User authentication
 - [ ] Team management
