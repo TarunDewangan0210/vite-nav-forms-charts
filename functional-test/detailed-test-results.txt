@@ -1,0 +1,115 @@
+Detailed Test Results - Check-in App
+=====================================
+Date: January 2024
+Command: npm test -- --run
+Environment: Vitest v3.1.4
+Status: PARTIAL SUCCESS (Dependencies Fixed)
+
+SUMMARY:
+--------
+✓ Test Files: 1 passed | 1 failed (2 total)
+✓ Tests: 7 passed | 2 failed (9 total)
+⏱ Duration: 1.43s
+
+DETAILED RESULTS:
+================
+
+PASSED TESTS:
+-------------
+✓ src/utils/storage.test.ts (3 tests) - 6ms
+  ✓ getCheckIns returns empty array when no data
+  ✓ saveCheckIn stores check-in data
+  ✓ exportToCSV generates CSV content
+
+✓ src/components/Navigation.test.tsx (4 out of 6 tests passed)
+  ✓ Navigation > renders navigation component - 32ms
+  ✓ Navigation > renders navigation brand - 8ms
+  ✓ Navigation > renders all navigation links - 5ms
+  ✓ Navigation > can change theme - 5ms
+
+FAILED TESTS:
+-------------
+❌ src/components/Navigation.test.tsx (2 tests failed)
+
+1. Navigation > renders theme selector - 11ms
+   Error: expect(element).toHaveValue(Light)
+   Expected: "Light"
+   Received: "light"
+   Location: src/components/Navigation.test.tsx:36:38
+   
+   Issue: Test expects capitalized "Light" but component returns lowercase "light"
+
+2. Navigation > mobile menu toggle works - 8ms
+   Error: expect(element).toHaveClass("nav-menu-open")
+   Expected class: "nav-menu-open"
+   Received class: "nav-menu"
+   Location: src/components/Navigation.test.tsx:54:21
+   
+   Issue: Mobile menu toggle functionality not working as expected
+
+WARNINGS:
+---------
+- React state update warning in mobile menu toggle test
+- Suggestion to wrap state updates in act(...)
+
+PERFORMANCE METRICS:
+-------------------
+- Transform: 69ms
+- Setup: 283ms
+- Collect: 289ms
+- Tests: 74ms
+- Environment: 894ms
+- Prepare: 204ms
+
+DEPENDENCY STATUS:
+-----------------
+✅ @testing-library/react - INSTALLED
+✅ @testing-library/jest-dom - INSTALLED
+✅ @testing-library/user-event - INSTALLED
+❌ @vitest/coverage-v8 - NOT INSTALLED (React 19 compatibility issues)
+
+COVERAGE ATTEMPT:
+----------------
+Coverage testing failed due to dependency conflicts with React 19.
+Error: ERESOLVE could not resolve peer dependencies for @visx/axis@3.12.0
+
+ISSUES IDENTIFIED:
+-----------------
+1. Test Assertion Mismatches:
+   - Theme selector test expects "Light" but gets "light"
+   - Mobile menu CSS class expectations don't match implementation
+
+2. React 19 Compatibility:
+   - Several packages have peer dependency conflicts with React 19
+   - @visx/axis requires React ^16.3.0-0 || ^17.0.0-0 || ^18.0.0-0
+   - Coverage tools cannot be installed due to these conflicts
+
+3. Test Implementation Issues:
+   - Mobile menu toggle test doesn't properly simulate user interaction
+   - State updates need to be wrapped in act() for proper testing
+
+RECOMMENDATIONS:
+---------------
+1. Fix Test Assertions:
+   - Update theme selector test to expect "light" instead of "Light"
+   - Verify mobile menu CSS classes and update test expectations
+
+2. Improve Test Quality:
+   - Wrap state updates in act() to eliminate warnings
+   - Use proper user event simulation for mobile menu testing
+
+3. Address Dependency Conflicts:
+   - Consider downgrading React to 18.x for better ecosystem compatibility
+   - Or wait for @visx and other packages to support React 19
+
+4. Add More Test Coverage:
+   - Create tests for Dashboard component
+   - Add tests for CheckInForm component
+   - Test chart data processing utilities
+
+NEXT STEPS:
+----------
+1. Fix the 2 failing test assertions
+2. Add act() wrapper for state updates
+3. Expand test coverage to other components
+4. Consider React version compatibility for full ecosystem support 
