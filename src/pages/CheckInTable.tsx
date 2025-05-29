@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { getCheckIns, exportToCSV } from '../utils/storage';
+import { getCheckIns, exportToCSV, deleteCheckIn, updateCheckIn } from '../utils/storage';
+import EditCheckInModal from '../components/EditCheckInModal';
 import type { CheckIn } from '../types';
 import './CheckInTable.css';
 
 const CheckInTable: React.FC = () => {
   const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
+  const [editingCheckIn, setEditingCheckIn] = useState<CheckIn | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   useEffect(() => {
     setCheckIns(getCheckIns());
@@ -14,8 +17,34 @@ const CheckInTable: React.FC = () => {
     exportToCSV(checkIns);
   };
 
+  const handleDelete = (id: string) => {
+    if (window.confirm('Are you sure you want to delete this check-in?')) {
+      deleteCheckIn(id);
+      setCheckIns(getCheckIns());
+    }
+  };
+
+  const handleEdit = (checkIn: CheckIn) => {
+    setEditingCheckIn(checkIn);
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEdit = (updatedCheckIn: CheckIn) => {
+    updateCheckIn(updatedCheckIn);
+    setCheckIns(getCheckIns());
+    setEditingCheckIn(null);
+    setIsEditModalOpen(false);
+  };
+
+  const handleCloseEdit = () => {
+    setEditingCheckIn(null);
+    setIsEditModalOpen(false);
+  };
+
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
+    const [year, month, day] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    return date.toLocaleDateString();
   };
 
   const getStressLevelColor = (level: number) => {
@@ -59,6 +88,7 @@ const CheckInTable: React.FC = () => {
                 <th>Blockers</th>
                 <th>Stress Level</th>
                 <th>Morale Level</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -96,11 +126,38 @@ const CheckInTable: React.FC = () => {
                       {checkIn.moraleLevel}
                     </span>
                   </td>
+                  <td data-label="Actions">
+                    <div className="action-buttons">
+                      <button
+                        onClick={() => handleEdit(checkIn)}
+                        className="action-btn edit-btn"
+                        title="Edit check-in"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={() => handleDelete(checkIn.id)}
+                        className="action-btn delete-btn"
+                        title="Delete check-in"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      )}
+
+      {editingCheckIn && (
+        <EditCheckInModal
+          checkIn={editingCheckIn}
+          isOpen={isEditModalOpen}
+          onClose={handleCloseEdit}
+          onSave={handleSaveEdit}
+        />
       )}
     </div>
   );

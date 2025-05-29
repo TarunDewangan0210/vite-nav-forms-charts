@@ -14,6 +14,12 @@ interface LineChartProps {
   color?: string;
 }
 
+// Helper function to safely parse date string without timezone issues
+const parseDate = (dateString: string): Date => {
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day); // month is 0-indexed
+};
+
 const LineChartInner: React.FC<LineChartProps & { width: number; height: number }> = ({
   data,
   title,
@@ -34,7 +40,7 @@ const LineChartInner: React.FC<LineChartProps & { width: number; height: number 
   }
 
   // Accessors
-  const getDate = (d: ChartData) => new Date(d.date);
+  const getDate = (d: ChartData) => parseDate(d.date);
   const getValue = (d: ChartData) => d.value;
 
   // Scales

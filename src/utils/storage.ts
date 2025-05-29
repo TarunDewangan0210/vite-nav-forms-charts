@@ -22,6 +22,29 @@ export const saveCheckIn = (checkIn: CheckIn): void => {
   }
 };
 
+export const updateCheckIn = (updatedCheckIn: CheckIn): void => {
+  try {
+    const checkIns = getCheckIns();
+    const index = checkIns.findIndex(checkIn => checkIn.id === updatedCheckIn.id);
+    if (index !== -1) {
+      checkIns[index] = updatedCheckIn;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(checkIns));
+    }
+  } catch (error) {
+    console.error('Error updating check-in in localStorage:', error);
+  }
+};
+
+export const deleteCheckIn = (id: string): void => {
+  try {
+    const checkIns = getCheckIns();
+    const filteredCheckIns = checkIns.filter(checkIn => checkIn.id !== id);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(filteredCheckIns));
+  } catch (error) {
+    console.error('Error deleting check-in from localStorage:', error);
+  }
+};
+
 export const exportToCSV = (checkIns: CheckIn[]): void => {
   const headers = [
     'ID',

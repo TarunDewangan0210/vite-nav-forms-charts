@@ -1,86 +1,139 @@
-import { describe, test, expect, beforeEach } from 'vitest';
-import { getCheckIns, saveCheckIn } from './storage';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
+import { getCheckIns, saveCheckIn, updateCheckIn, deleteCheckIn, exportToCSV } from './storage';
 import type { CheckIn } from '../types';
 
 // Mock localStorage
 const localStorageMock = {
-  getItem: (key: string) => {
-    return localStorageMock.store[key] || null;
-  },
-  setItem: (key: string, value: string) => {
-    localStorageMock.store[key] = value;
-  },
-  clear: () => {
-    localStorageMock.store = {};
-  },
-  store: {} as Record<string, string>
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
 };
 
 Object.defineProperty(window, 'localStorage', {
   value: localStorageMock
 });
 
+// Mock URL and Blob for CSV export
+(globalThis as any).URL = {
+  createObjectURL: vi.fn(() => 'mock-url'),
+  revokeObjectURL: vi.fn(),
+};
+
+(globalThis as any).Blob = vi.fn();
+
 describe('Storage Utils', () => {
   beforeEach(() => {
-    localStorageMock.clear();
+    vi.clearAllMocks();
   });
 
-  test('getCheckIns returns empty array when no data', () => {
-    const checkIns = getCheckIns();
-    expect(checkIns).toEqual([]);
-  });
+  const mockCheckIn: CheckIn = {
+    id: '1',
+    name: 'John Doe',
+    date: '2025-01-15',
+    activitiesSince: 'Completed project setup',
+    activitiesPlanned: 'Start development',
+    blockers: 'None',
+    stressLevel: 2,
+    moraleLevel: 4,
+    timestamp: Date.now()
+  };
 
-  test('saveCheckIn stores check-in data', () => {
-    const checkIn: CheckIn = {
-      id: '1',
-      name: 'Test User',
-      date: '2024-01-01',
-      activitiesSince: 'Working on tests',
-      activitiesPlanned: 'More testing',
-      blockers: 'None',
-      stressLevel: 3,
-      moraleLevel: 4,
-      timestamp: Date.now()
-    };
-
-    saveCheckIn(checkIn);
-    const checkIns = getCheckIns();
+  test('should get empty array when no check-ins exist', () => {
+    localStorageMock.getItem.mockReturnValue(null);
     
-    expect(checkIns).toHaveLength(1);
-    expect(checkIns[0]).toEqual(checkIn);
+    const result = getCheckIns();
+    
+    expect(result).toEqual([]);
+    expect(localStorageMock.getItem).toHaveBeenCalledWith('check-ins');
   });
 
-  test('multiple check-ins are stored correctly', () => {
-    const checkIn1: CheckIn = {
-      id: '1',
-      name: 'User 1',
-      date: '2024-01-01',
-      activitiesSince: 'Task 1',
-      activitiesPlanned: 'Task 2',
-      blockers: 'None',
-      stressLevel: 2,
-      moraleLevel: 5,
-      timestamp: Date.now()
-    };
-
-    const checkIn2: CheckIn = {
-      id: '2',
-      name: 'User 2',
-      date: '2024-01-02',
-      activitiesSince: 'Task 3',
-      activitiesPlanned: 'Task 4',
-      blockers: 'Blocked',
-      stressLevel: 4,
-      moraleLevel: 3,
-      timestamp: Date.now()
-    };
-
-    saveCheckIn(checkIn1);
-    saveCheckIn(checkIn2);
+  test('should save check-in to localStorage', () => {
+    localStorageMock.getItem.mockReturnValue('[]');
     
-    const checkIns = getCheckIns();
-    expect(checkIns).toHaveLength(2);
-    expect(checkIns[0]).toEqual(checkIn1);
-    expect(checkIns[1]).toEqual(checkIn2);
+    saveCheckIn(mockCheckIn);
+    
+    expect(localStorageMock.setItem).toHaveBeenCalledWith(
+      'check-ins',
+      JSON.stringify([mockCheckIn])
+    );
+  });
+
+  test('should update existing check-in', () => {
+    const existingCheckIns = [mockCheckIn];
+    const updatedCheckIn = { ...mockCheckIn, name: 'Jane Doe', stressLevel: 3 };
+    
+    localStorageMock.getItem.mockReturnValue(JSON.stringify(existingCheckIns));
+    
+    updateCheckIn(updatedCheckIn);
+    
+    expect(localStorageMock.setItem).toHaveBeenCalledWith(
+      'check-ins',
+      JSON.stringify([updatedCheckIn])
+    );
+  });
+
+  test('should not update if check-in ID not found', () => {
+    const existingCheckIns = [mockCheckIn];
+    const nonExistentCheckIn = { ...mockCheckIn, id: '999' };
+    
+    localStorageMock.getItem.mockReturnValue(JSON.stringify(existingCheckIns));
+    
+    updateCheckIn(nonExistentCheckIn);
+    
+    // Should still save the original data unchanged
+    expect(localStorageMock.setItem).not.toHaveBeenCalled();
+  });
+
+  test('should delete check-in by ID', () => {
+    const checkIn2 = { ...mockCheckIn, id: '2', name: 'Jane Doe' };
+    const existingCheckIns = [mockCheckIn, checkIn2];
+    
+    localStorageMock.getItem.mockReturnValue(JSON.stringify(existingCheckIns));
+    
+    deleteCheckIn('1');
+    
+    expect(localStorageMock.setItem).toHaveBeenCalledWith(
+      'check-ins',
+      JSON.stringify([checkIn2])
+    );
+  });
+
+  test('should handle delete when ID not found', () => {
+    const existingCheckIns = [mockCheckIn];
+    
+    localStorageMock.getItem.mockReturnValue(JSON.stringify(existingCheckIns));
+    
+    deleteCheckIn('999');
+    
+    // Should save the same data (no changes)
+    expect(localStorageMock.setItem).toHaveBeenCalledWith(
+      'check-ins',
+      JSON.stringify(existingCheckIns)
+    );
+  });
+
+  test('should export check-ins to CSV', () => {
+    // Mock document methods
+    const mockLink = {
+      setAttribute: vi.fn(),
+      click: vi.fn(),
+      style: { visibility: '' }
+    };
+    
+    const createElementSpy = vi.spyOn(document, 'createElement').mockReturnValue(mockLink as any);
+    const appendChildSpy = vi.spyOn(document.body, 'appendChild').mockImplementation(() => mockLink as any);
+    const removeChildSpy = vi.spyOn(document.body, 'removeChild').mockImplementation(() => mockLink as any);
+    
+    exportToCSV([mockCheckIn]);
+    
+    expect(createElementSpy).toHaveBeenCalledWith('a');
+    expect(mockLink.click).toHaveBeenCalled();
+    expect(appendChildSpy).toHaveBeenCalledWith(mockLink);
+    expect(removeChildSpy).toHaveBeenCalledWith(mockLink);
+    
+    createElementSpy.mockRestore();
+    appendChildSpy.mockRestore();
+    removeChildSpy.mockRestore();
   });
 }); 
